@@ -55,15 +55,16 @@ export const MemberManager = ({ teamId }: MemberManagerProps) => {
 
     setIsLoading(true);
     
-    // 1. Tìm user_id từ email
+    // 1. Tìm user_id từ email (không phân biệt hoa thường)
+    const normalizedEmail = email.toLowerCase();
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id, email')
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .single();
       
     if (profileError || !profile) {
-      toast.error('Không tìm thấy ngÆ°á»i dùng với email này trong hệ thống.');
+      toast.error('Không tìm thấy người dùng với email này trong hệ thống.');
       setIsLoading(false);
       return;
     }
@@ -76,11 +77,11 @@ export const MemberManager = ({ teamId }: MemberManagerProps) => {
       .single();
     
     if (data && !error) {
-      toast.success(`Đã thêm ${email} vào team`);
+      toast.success(`Đã thêm ${normalizedEmail} vào đội`);
       setEmail('');
     } else {
       // Catch unique constraint violation
-      toast.error('Lỗi: ' + (error?.message || 'NgÆ°á»i dùng đã ở trong team.'));
+      toast.error('Lỗi: ' + (error?.message || 'NgÆ°á» i dùng đã ở trong team.'));
     }
 
     setIsLoading(false);

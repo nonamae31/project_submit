@@ -67,11 +67,12 @@ export const ProjectMemberManager = ({ projectId }: ProjectMemberManagerProps) =
 
     setIsLoading(true);
     
-    // Tìm profile từ email
+    // Tìm profile từ email (không phân biệt hoa thường)
+    const normalizedEmail = email.toLowerCase();
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id, email')
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .single();
       
     if (profileError || !profile) {
@@ -83,12 +84,12 @@ export const ProjectMemberManager = ({ projectId }: ProjectMemberManagerProps) =
     // Thêm vào project_members
     const { data, error } = await supabase
       .from('project_members')
-      .insert({ project_id: projectId, user_email: email, role: 'member' })
+      .insert({ project_id: projectId, user_email: normalizedEmail, role: 'member' })
       .select()
       .single();
     
     if (data && !error) {
-      toast.success(`Đã thêm ${email} vào dự án`);
+      toast.success(`Đã thêm ${normalizedEmail} vào dự án`);
       setEmail('');
     } else {
       // Nếu lỗi là duplicate thì báo lỗi hợp lý

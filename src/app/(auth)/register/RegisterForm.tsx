@@ -41,12 +41,13 @@ export function RegisterForm() {
 
     try {
       // Vì đã chuyển sang dùng public.profiles thay vì auth.users
+      const normalizedEmail = data.email.toLowerCase();
       const { data: newProfile, error: signUpError } = await supabase
         .from('profiles')
         .insert({
-          email: data.email,
+          email: normalizedEmail,
           password: data.password,
-          full_name: data.email.split('@')[0],
+          full_name: normalizedEmail.split('@')[0],
           role: 'user'
         })
         .select()

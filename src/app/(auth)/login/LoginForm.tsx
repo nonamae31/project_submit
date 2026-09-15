@@ -38,10 +38,11 @@ export function LoginForm() {
 
     try {
       // Xác thực bằng bảng public.profiles thay vì auth.users
+      const normalizedEmail = data.email.toLowerCase();
       const { data: profile, error: signInError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('email', data.email)
+        .eq('email', normalizedEmail)
         .eq('password', data.password)
         .single();
 
