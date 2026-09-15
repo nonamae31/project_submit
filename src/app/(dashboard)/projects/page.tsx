@@ -40,19 +40,29 @@ export default async function ProjectsPage() {
     ownedProjects = (ownerData as Project[]) || [];
   }
 
-  // Fetch participating projects
-  const { data: participatingData, error: participatingError } = await supabase
-    .from('projects')
-    .select('*, project_members!inner(user_email)')
-    .eq('project_members.user_email', user.email)
-    .order('created_at', { ascending: false });
-
-  if (participatingError) console.error('Error fetching participating projects:', participatingError);
-  
-  const participatingProjects = (participatingData as any[])?.map(p => {
-    const { project_members, ...project } = p;
-    return project as Project;
-  }) || [];
+  // Fetch participating projects robustly
+  let participatingProjects: Project[] = [];
+  if (user.email) {
+    const { data: memberRows, error: memberError } = await supabase
+      .from('project_members')
+      .select('project_id')
+      .eq('user_email', user.email);
+      
+    if (memberError) {
+      console.error('Error fetching project members:', memberError);
+    } else if (memberRows && memberRows.length > 0) {
+      const pIds = memberRows.map(r => r.project_id);
+      const { data: pData } = await supabase
+        .from('projects')
+        .select('*')
+        .in('id', pIds)
+        .order('created_at', { ascending: false });
+        
+      if (pData) {
+        participatingProjects = pData as Project[];
+      }
+    }
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">
