@@ -12,13 +12,10 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { SidebarNav } from '@/components/layout/SidebarNav';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
 
-export default async function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { data: teams, error: _error } = await supabase
-    .from('teams')
-    .select('*')
-    .order('created_at', { ascending: false });
+import { getUserTeams } from '@/app/actions/team.actions';
 
-  const teamsList = (teams as Team[]) || [];
+export default async function DashboardLayout({ children }: DashboardLayoutProps) {
+  const teamsList = await getUserTeams();
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900">
