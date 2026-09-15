@@ -16,6 +16,15 @@ export const ProjectMemberManager = ({ projectId }: ProjectMemberManagerProps) =
   const [members, setMembers] = useState<any[]>([]);
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    import('@/app/actions/auth.actions').then((m) => {
+      m.getSessionUser().then((user) => {
+        setCurrentUser(user);
+      });
+    });
+  }, []);
 
   useEffect(() => {
     if (!projectId) return;
@@ -48,6 +57,9 @@ export const ProjectMemberManager = ({ projectId }: ProjectMemberManagerProps) =
       supabase.removeChannel(channel);
     };
   }, [projectId]);
+
+  const isLeader = currentUser?.role === 'admin' || 
+                   members.find(m => m.user_email === currentUser?.email)?.role === 'leader';
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,28 +118,29 @@ export const ProjectMemberManager = ({ projectId }: ProjectMemberManagerProps) =
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-        <h3 className="mb-4 text-lg font-medium">Mời thành viên vào Dự án</h3>
-        <form onSubmit={handleInvite} className="flex flex-col sm:flex-row sm:items-end gap-4">
-          <div className="flex-1 space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input 
-              id="email" 
-              type="email" 
-              placeholder="Nhập email thành viên..." 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
-              required
-              autoFocus
-              className="hover:bg-accent active:scale-95 focus-visible:ring-2 transition-all w-full"
-            />
-          </div>
-          <Button type="submit" disabled={isLoading || !email} className="hover:bg-accent active:scale-95 focus-visible:ring-2 transition-all w-full sm:w-auto mt-2 sm:mt-0">
-            {isLoading ? 'Đang mời...' : 'Mời'}
-          </Button>
-        </form>
-      </div>
+      {isLeader && (
+        <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+          <h3 className="mb-4 text-lg font-medium">Mời thành viên vào Dự án</h3>
+          <form onSubmit={handleInvite} className="flex flex-col sm:flex-row sm:items-end gap-4">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="Nhập email thành viên..." 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+                required
+                className="hover:bg-accent active:scale-95 focus-visible:ring-2 transition-all w-full"
+              />
+            </div>
+            <Button type="submit" disabled={isLoading || !email} className="hover:bg-accent active:scale-95 focus-visible:ring-2 transition-all w-full sm:w-auto mt-2 sm:mt-0">
+              {isLoading ? 'Đang mời...' : 'Mời'}
+            </Button>
+          </form>
+        </div>
+      )}
 
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Danh sách thành viên ({members.length})</h3>
@@ -141,7 +154,7 @@ export const ProjectMemberManager = ({ projectId }: ProjectMemberManagerProps) =
                   <p className="font-medium truncate" title={member.user_email}>{member.user_email}</p>
                   <p className="text-sm text-slate-500 capitalize">{member.role}</p>
                 </div>
-                {member.role !== 'admin' && (
+                {isLeader && member.role !== 'admin' && member.user_email !== currentUser?.email && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
