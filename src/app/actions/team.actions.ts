@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 import { supabase } from '@/lib/supabase/client';
 import { revalidatePath } from 'next/cache';
@@ -15,7 +15,7 @@ export async function createTeam(formData: FormData): Promise<ActionResponse<Tea
   const description = formData.get('description') as string;
 
   if (!name) {
-    return { success: false, error: 'TÃªn team lÃ  báº¯t buá»™c' };
+    return { success: false, error: 'Tên team là bắt buộc' };
   }
 
   const { data, error } = await supabase

@@ -18,8 +18,6 @@ const profileSchema = z.object({
   bio: z.string().optional(),
 });
 
-type ProfileFormValues = z.infer<typeof profileSchema>;
-
 const passwordSchema = z.object({
   password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
   confirmPassword: z.string().min(6, "Xác nhận mật khẩu tối thiểu 6 ký tự"),
@@ -28,25 +26,28 @@ const passwordSchema = z.object({
   path: ["confirmPassword"],
 });
 
+type ProfileFormValues = z.infer<typeof profileSchema>;
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
 export function ProfileClient({ userId }: { userId: string }) {
-  const [activeTab, setActiveTab] = useState<"info" | "password">("info");
-  
-  // Profile Form
-  const {
-    register: registerProfile,
-    handleSubmit: handleProfileSubmit,
-    reset: resetProfile,
-    formState: { errors: profileErrors, isSubmitting: isProfileSubmitting },
-  } = useForm<z.infer<typeof profileSchema>>({
+  const [activeTab, setActiveTab] = useState<"profile" | "password">("profile");
+
+  const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       full_name: "",
-      age: 0,
+      age: 18,
       student_id: "",
       phone: "",
       bio: "",
+    },
+  });
+
+  const passwordForm = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
     },
   });
 
@@ -57,11 +58,11 @@ export function ProfileClient({ userId }: { userId: string }) {
         .select("*")
         .eq("id", userId)
         .single();
-        
+
       if (data && !error) {
-        resetProfile({
+        profileForm.reset({
           full_name: data.full_name || "",
-          age: data.age || 0,
+          age: data.age || 18,
           student_id: data.student_id || "",
           phone: data.phone || "",
           bio: data.bio || "",
@@ -69,157 +70,136 @@ export function ProfileClient({ userId }: { userId: string }) {
       }
     }
     loadProfile();
-  }, [userId, resetProfile]);
+  }, [userId, profileForm]);
 
   const onProfileSubmit = async (data: ProfileFormValues) => {
-    const { error } = await supabase
-      .from("profiles")
-      .update(data)
-      .eq("id", userId);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update(data)
+        .eq("id", userId);
 
-    if (error) {
-      toast.error("Cập nhật thất bại: " + error.message);
-    } else {
+      if (error) throw error;
       toast.success("Cập nhật thông tin thành công");
+    } catch (error: any) {
+      toast.error("Cập nhật thất bại: " + error.message);
     }
   };
 
-  // Password Form
-  const {
-    register: registerPassword,
-    handleSubmit: handlePasswordSubmit,
-    reset: resetPassword,
-    formState: { errors: passwordErrors, isSubmitting: isPasswordSubmitting },
-  } = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordSchema),
-    defaultValues: {
-      password: "",
-      confirmPassword: "",
-    },
-  });
-
-
-
   const onPasswordSubmit = async (data: PasswordFormValues) => {
     try {
-      const { updateProfilePassword } = await import('@/app/actions/auth.actions');
-      await updateProfilePassword(data.password);
+      const { error } = await supabase.auth.updateUser({
+        password: data.password
+      });
+
+      if (error) throw error;
+      
       toast.success("Đổi mật khẩu thành công!");
-      resetPassword();
+      passwordForm.reset();
     } catch (error: any) {
       toast.error("Đổi mật khẩu thất bại: " + error.message);
     }
   };
 
+  const isProfileSubmitting = profileForm.formState.isSubmitting;
+  const isPasswordSubmitting = passwordForm.formState.isSubmitting;
+
   return (
-    <div className="w-full">
-      {/* Tabs Header */}
-      <div className="flex space-x-1 border-b border-slate-200 dark:border-slate-800 mb-6">
+    <div className="bg-white dark:bg-slate-900 rounded-lg shadow border border-slate-200 dark:border-slate-800 p-6">
+      <div className="flex space-x-4 mb-6 border-b border-slate-200 dark:border-slate-800 pb-2">
         <button
-          onClick={() => setActiveTab("info")}
-          type="button"
-          className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
-            activeTab === "info"
+          onClick={() => setActiveTab("profile")}
+          className={`pb-2 px-1 font-medium text-sm transition-colors border-b-2 ${
+            activeTab === "profile"
               ? "border-primary text-primary"
-              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
           }`}
         >
           Thông tin cá nhân
         </button>
         <button
           onClick={() => setActiveTab("password")}
-          type="button"
-          className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
+          className={`pb-2 px-1 font-medium text-sm transition-colors border-b-2 ${
             activeTab === "password"
               ? "border-primary text-primary"
-              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
           }`}
         >
           Đổi mật khẩu
         </button>
       </div>
 
-      {/* Profile Form Tab */}
-      {activeTab === "info" && (
-        <div className="space-y-6">
-          <form onSubmit={handleProfileSubmit(onProfileSubmit)} className="space-y-4 max-w-xl">
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Họ và tên</Label>
-              <Input id="full_name" {...registerProfile("full_name")} />
-              {profileErrors.full_name && (
-                <p className="text-sm text-red-500">{profileErrors.full_name.message}</p>
+      {activeTab === "profile" && (
+        <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+          <div>
+            <Label htmlFor="full_name">Họ và tên</Label>
+            <Input id="full_name" {...profileForm.register("full_name")} />
+            {profileForm.formState.errors.full_name && (
+              <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.full_name.message}</p>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="age">Tuổi</Label>
+              <Input id="age" type="number" {...profileForm.register("age", { valueAsNumber: true })} />
+              {profileForm.formState.errors.age && (
+                <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.age.message}</p>
               )}
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="age">Tuổi</Label>
-                <Input id="age" type="number" {...registerProfile("age", { valueAsNumber: true })} />
-                {profileErrors.age && (
-                  <p className="text-sm text-red-500">{profileErrors.age.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="student_id">Mã SV</Label>
-                <Input id="student_id" {...registerProfile("student_id")} />
-                {profileErrors.student_id && (
-                  <p className="text-sm text-red-500">{profileErrors.student_id.message}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Số điện thoại</Label>
-              <Input id="phone" {...registerProfile("phone")} />
-              {profileErrors.phone && (
-                <p className="text-sm text-red-500">{profileErrors.phone.message}</p>
+            <div>
+              <Label htmlFor="student_id">Mã SV</Label>
+              <Input id="student_id" {...profileForm.register("student_id")} />
+              {profileForm.formState.errors.student_id && (
+                <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.student_id.message}</p>
               )}
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="bio">Giới thiệu</Label>
-              <textarea
-                id="bio"
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                {...registerProfile("bio")}
-              />
-              {profileErrors.bio && (
-                <p className="text-sm text-red-500">{profileErrors.bio.message}</p>
-              )}
-            </div>
+          <div>
+            <Label htmlFor="phone">Số điện thoại</Label>
+            <Input id="phone" {...profileForm.register("phone")} />
+            {profileForm.formState.errors.phone && (
+              <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.phone.message}</p>
+            )}
+          </div>
 
-            <Button type="submit" disabled={isProfileSubmitting}>
-              {isProfileSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
-            </Button>
-          </form>
-        </div>
+          <div>
+            <Label htmlFor="bio">Giới thiệu</Label>
+            <Input id="bio" {...profileForm.register("bio")} />
+            {profileForm.formState.errors.bio && (
+              <p className="text-red-500 text-xs mt-1">{profileForm.formState.errors.bio.message}</p>
+            )}
+          </div>
+
+          <Button type="submit" disabled={isProfileSubmitting}>
+            {isProfileSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
+          </Button>
+        </form>
       )}
 
-      {/* Password Form Tab */}
       {activeTab === "password" && (
-        <div className="space-y-6">
-          <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-4 max-w-xl">
-            <div className="space-y-2">
-              <Label htmlFor="password">Mật khẩu mới</Label>
-              <Input id="password" type="password" {...registerPassword("password")} />
-              {passwordErrors.password && (
-                <p className="text-sm text-red-500">{passwordErrors.password.message}</p>
-              )}
-            </div>
+        <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+          <div>
+            <Label htmlFor="password">Mật khẩu mới</Label>
+            <Input id="password" type="password" {...passwordForm.register("password")} />
+            {passwordForm.formState.errors.password && (
+              <p className="text-red-500 text-xs mt-1">{passwordForm.formState.errors.password.message}</p>
+            )}
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Xác nhận mật khẩu mới</Label>
-              <Input id="confirmPassword" type="password" {...registerPassword("confirmPassword")} />
-              {passwordErrors.confirmPassword && (
-                <p className="text-sm text-red-500">{passwordErrors.confirmPassword.message}</p>
-              )}
-            </div>
+          <div>
+            <Label htmlFor="confirmPassword">Xác nhận mật khẩu mới</Label>
+            <Input id="confirmPassword" type="password" {...passwordForm.register("confirmPassword")} />
+            {passwordForm.formState.errors.confirmPassword && (
+              <p className="text-red-500 text-xs mt-1">{passwordForm.formState.errors.confirmPassword.message}</p>
+            )}
+          </div>
 
-            <Button type="submit" disabled={isPasswordSubmitting}>
-              {isPasswordSubmitting ? "Đang đổi..." : "Đổi mật khẩu"}
-            </Button>
-          </form>
-        </div>
+          <Button type="submit" disabled={isPasswordSubmitting}>
+            {isPasswordSubmitting ? "Đang đổi..." : "Đổi mật khẩu"}
+          </Button>
+        </form>
       )}
     </div>
   );

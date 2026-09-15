@@ -1,4 +1,4 @@
-﻿import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { TeamListClient } from './TeamListClient';
 import type { Team } from '@/types/team.types';
 
@@ -17,8 +17,8 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Quáº£n lÃ½ Team</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Xem, táº¡o vÃ  quáº£n lÃ½ cÃ¡c team cÅ©ng nhÆ° thÃ nh viÃªn cá»§a báº¡n.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Quản lý Team</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Xem, tạo và quản lý các team cũng như thành viên của bạn.</p>
       </div>
       <TeamListClient initialTeams={(teams as Team[]) || []} />
     </div>
