@@ -9,60 +9,50 @@ cloudinary.config({
   secure: true,
 });
 
-export async function uploadSubmissionMedia(formData: FormData) {
-  try {
-    const user = await getSessionUser();
-    if (!user) throw new Error('Unauthorized');
+export async function getCloudinarySignature(taskId: string) {
+  const user = await getSessionUser();
+  if (!user) throw new Error('Unauthorized');
+  
+  const timestamp = Math.round((new Date).getTime() / 1000);
+  const folder = `submissions/${taskId}`;
+  
+  const signature = cloudinary.utils.api_sign_request(
+    { timestamp, folder },
+    cloudinary.config().api_secret!
+  );
+  
+  return { 
+    timestamp, 
+    signature, 
+    cloudName: cloudinary.config().cloud_name,
+    apiKey: cloudinary.config().api_key,
+    folder
+  };
+}
 
-    const file = formData.get('file') as File;
-    const taskId = formData.get('taskId') as string;
-    const type = formData.get('type') as string;
+export async function saveSubmissionToDB(taskId: string, type: string, secureUrl: string, publicId: string) {
+  const user = await getSessionUser();
+  if (!user) throw new Error('Unauthorized');
 
-    if (!file || !taskId || !type) {
-      throw new Error('Missing required fields');
-    }
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('task_submissions')
+    .insert({
+      task_id: taskId,
+      user_id: user.id,
+      type: type,
+      content: secureUrl,
+      cloudinary_public_id: publicId,
+      is_public: false,
+    })
+    .select()
+    .single();
 
-    // Upload to Cloudinary using stream
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    const uploadResult = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: `submissions/${taskId}`, resource_type: 'auto' },
-        (error, result) => {
-          if (error) {
-            console.error('Cloudinary Error:', error);
-            return reject(new Error(error.message || 'Upload failed'));
-          }
-          resolve(result);
-        }
-      );
-      uploadStream.end(buffer);
-    }) as any;
-
-    // Insert to DB
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('task_submissions')
-      .insert({
-        task_id: taskId,
-        user_id: user.id,
-        type: type,
-        content: uploadResult.secure_url,
-        cloudinary_public_id: uploadResult.public_id,
-        is_public: false,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase Insert Error:', error);
-      throw new Error(error.message);
-    }
-    return data;
-  } catch (error: any) {
-    console.error('Action uploadSubmissionMedia failed:', error);
-    throw new Error(error.message || 'Lỗi hệ thống khi tải lên');
+  if (error) {
+    console.error('Supabase Insert Error:', error);
+    throw new Error(error.message);
   }
+  return data;
 }
 
 export async function addTextOrLinkSubmission(taskId: string, type: string, content: string) {

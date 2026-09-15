@@ -8,7 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Submission } from '@/types/kanban.types';
 import {
-  uploadSubmissionMedia,
+  getCloudinarySignature,
+  saveSubmissionToDB,
   addTextOrLinkSubmission,
   deleteSubmission,
   toggleSubmissionPrivacy,
@@ -81,26 +82,45 @@ export function TaskSubmissions({ taskId, projectId, isLeader, isOwnerOrLeader, 
     if (!file) return;
 
     const interval = simulateProgress();
+    setIsUploading(true);
     
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('taskId', taskId);
-      
       const type = file.type.startsWith('image/') ? 'image' : 
                    file.type.startsWith('video/') ? 'video' : 'doc';
-      formData.append('type', type);
+      
+      // 1. Get Signature from Server
+      const { timestamp, signature, cloudName, apiKey, folder } = await getCloudinarySignature(taskId);
 
-      await uploadSubmissionMedia(formData);
+      // 2. Upload directly to Cloudinary
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('api_key', apiKey);
+      formData.append('timestamp', timestamp.toString());
+      formData.append('signature', signature);
+      formData.append('folder', folder);
+      
+      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json();
+        throw new Error(err.error?.message || 'Lỗi tải lên Cloudinary');
+      }
+      
+      const result = await uploadRes.json();
+
+      // 3. Save to DB
+      await saveSubmissionToDB(taskId, type, result.secure_url, result.public_id);
       
       setUploadProgress(100);
       setTimeout(() => {
         setIsUploading(false);
         setUploadProgress(0);
-        fetchSubmissions(); // Refresh to get relations
+        fetchSubmissions();
+        toast.success('Đã tải tệp lên');
       }, 500);
-
-      toast.success('Tải lên thành công');
     } catch (error: any) {
       clearInterval(interval);
       setIsUploading(false);
