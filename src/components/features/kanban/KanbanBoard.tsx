@@ -325,7 +325,7 @@ export const KanbanBoard = ({ projectId }: { projectId?: string }) => {
         <CreateTaskModal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          projectId={projectId}
+          projectId={projectId || null}
         />
       </div>
     </div>
