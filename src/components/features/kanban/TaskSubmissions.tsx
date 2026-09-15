@@ -94,7 +94,7 @@ export function TaskSubmissions({ taskId, projectId, isLeader, isOwnerOrLeader, 
       // 2. Upload directly to Cloudinary
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('api_key', apiKey);
+      formData.append('api_key', apiKey || '');
       formData.append('timestamp', timestamp.toString());
       formData.append('signature', signature);
       formData.append('folder', folder);
