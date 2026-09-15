@@ -51,7 +51,7 @@ export const BoardColumn = ({ column, onTaskClick }: BoardColumnProps) => {
   };
 
   return (
-    <div className="flex h-full min-h-[500px] w-80 flex-col rounded-xl bg-zinc-50 p-4 dark:bg-zinc-900 group shrink-0">
+    <div className="flex h-full max-h-full min-h-[500px] w-80 flex-col rounded-xl bg-zinc-50 p-4 dark:bg-zinc-900 group shrink-0">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold">{column.title}</h3>
@@ -81,7 +81,7 @@ export const BoardColumn = ({ column, onTaskClick }: BoardColumnProps) => {
       <div
         ref={setNodeRef}
         className={cn(
-          'flex flex-1 flex-col gap-3 rounded-lg p-1 transition-colors',
+          'flex flex-1 flex-col gap-3 rounded-lg p-1 transition-colors overflow-y-auto min-h-[150px] custom-scrollbar',
           isOver ? 'bg-primary/10 ring-2 ring-primary/50' : 'bg-transparent'
         )}
       >
