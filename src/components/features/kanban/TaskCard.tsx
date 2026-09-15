@@ -39,9 +39,19 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
     transition,
   };
 
-  const assigneeInitials = task.assignee
-    ? task.assignee.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
-    : '?';
+  let assigneeInitials = '?';
+  if (task.assignee) {
+    if (task.assignee.includes('@')) {
+      assigneeInitials = task.assignee.substring(0, 2).toUpperCase();
+    } else {
+      const parts = task.assignee.split(' ').filter(Boolean);
+      if (parts.length >= 2) {
+        assigneeInitials = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      } else {
+        assigneeInitials = task.assignee.substring(0, 2).toUpperCase();
+      }
+    }
+  }
 
   const handleMove = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     e.stopPropagation();
