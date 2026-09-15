@@ -116,7 +116,7 @@ export function TaskSubmissions({ taskId, projectId, isLeader, isOwnerOrLeader, 
       fetchSubmissions();
       if (type === 'text') setTextInput('');
       if (type === 'link') setLinkInput('');
-      toast.success('�?ã thêm thành công');
+      toast.success('Đã thêm thành công');
     } catch (error: any) {
       toast.error('Lỗi: ' + error.message);
     }
@@ -128,7 +128,7 @@ export function TaskSubmissions({ taskId, projectId, isLeader, isOwnerOrLeader, 
     
     try {
       await deleteSubmission(id);
-      toast.success('�?ã xóa');
+      toast.success('Đã xóa');
     } catch (error: any) {
       setSubmissions(prevSubmissions); // Revert
       toast.error('Lỗi xóa: ' + error.message);
@@ -182,7 +182,7 @@ export function TaskSubmissions({ taskId, projectId, isLeader, isOwnerOrLeader, 
   const handleBulkApprove = async () => {
     try {
       await bulkApproveSubmissions(taskId);
-      toast.success('�?ã duyệt tất cả');
+      toast.success('Đã duyệt tất cả');
       fetchSubmissions();
     } catch (error: any) {
       toast.error('Lỗi: ' + error.message);
@@ -195,7 +195,7 @@ export function TaskSubmissions({ taskId, projectId, isLeader, isOwnerOrLeader, 
     return url.replace(/\.(mp4|mov|webm)$/i, '.jpg');
   };
 
-  if (loading) return <div className="text-sm text-zinc-500">�?ang tải...</div>;
+  if (loading) return <div className="text-sm text-zinc-500">Đang tải...</div>;
 
   return (
     <div className="flex flex-col gap-6 mt-4 relative">
@@ -215,7 +215,7 @@ export function TaskSubmissions({ taskId, projectId, isLeader, isOwnerOrLeader, 
           <input type="file" id="submission-file" className="hidden" onChange={handleFileUpload} />
           <label htmlFor="submission-file">
             <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('submission-file')?.click()} disabled={isUploading}>
-              📎 �?ính kèm File/Ảnh
+              📎 Đính kèm File/Ảnh
             </Button>
           </label>
         </div>
@@ -264,9 +264,9 @@ export function TaskSubmissions({ taskId, projectId, isLeader, isOwnerOrLeader, 
                   </span>
                   {/* E3: Pending Approval Badge */}
                   {sub.is_public ? (
-                    <span className="text-[10px] font-bold uppercase text-green-600 bg-green-100 px-1.5 py-0.5 rounded">�?ã duyệt</span>
+                    <span className="text-[10px] font-bold uppercase text-green-600 bg-green-100 px-1.5 py-0.5 rounded">Đã duyệt</span>
                   ) : (
-                    <span className="text-[10px] font-bold uppercase text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded flex items-center gap-1">🔒 Ch�? duyệt</span>
+                    <span className="text-[10px] font-bold uppercase text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded flex items-center gap-1">🔒 CHỜ DUYỆT</span>
                   )}
                 </div>
                 
@@ -287,7 +287,7 @@ export function TaskSubmissions({ taskId, projectId, isLeader, isOwnerOrLeader, 
 
               <div className="flex-1 cursor-pointer" onClick={() => (sub.type === 'image' || sub.type === 'video') && isFileVisible && setLightboxMedia(sub)}>
                 {!isFileVisible ? (
-                  <p className="text-sm text-zinc-400 italic">🔒 �?ang khóa ch�? phê duyệt</p>
+                  <p className="text-sm text-zinc-400 italic">🔒 Đang khóa chờ phê duyệt</p>
                 ) : (
                   <>
                     {sub.type === 'image' && (

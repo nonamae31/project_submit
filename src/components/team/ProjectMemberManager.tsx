@@ -8,23 +8,23 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
-interface MemberManagerProps {
-  teamId: string;
+interface ProjectMemberManagerProps {
+  projectId: string;
 }
 
-export const MemberManager = ({ teamId }: MemberManagerProps) => {
+export const ProjectMemberManager = ({ projectId }: ProjectMemberManagerProps) => {
   const [members, setMembers] = useState<any[]>([]);
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!teamId) return;
+    if (!projectId) return;
 
     const fetchMembers = async () => {
       const { data, error } = await supabase
-        .from('team_members')
-        .select('*, profiles!inner(email, full_name)')
-        .eq('team_id', teamId);
+        .from('project_members')
+        .select('*')
+        .eq('project_id', projectId);
       
       if (data && !error) {
         setMembers(data);
@@ -34,12 +34,12 @@ export const MemberManager = ({ teamId }: MemberManagerProps) => {
     fetchMembers();
 
     const channel = supabase
-      .channel('team-members')
+      .channel('project-members')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'team_members', filter: `team_id=eq.${teamId}` },
+        { event: '*', schema: 'public', table: 'project_members', filter: `project_id=eq.${projectId}` },
         () => {
-          fetchMembers(); // Re-fetch all to get the joined profiles data
+          fetchMembers();
         }
       )
       .subscribe();
@@ -47,7 +47,7 @@ export const MemberManager = ({ teamId }: MemberManagerProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [teamId]);
+  }, [projectId]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +55,7 @@ export const MemberManager = ({ teamId }: MemberManagerProps) => {
 
     setIsLoading(true);
     
-    // 1. Tìm user_id từ email
+    // Tìm profile từ email
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id, email')
@@ -63,47 +63,51 @@ export const MemberManager = ({ teamId }: MemberManagerProps) => {
       .single();
       
     if (profileError || !profile) {
-      toast.error('Không tìm thấy ngÆ°á»i dùng với email này trong hệ thống.');
+      toast.error('Không tìm thấy người dùng với email này trong hệ thống.');
       setIsLoading(false);
       return;
     }
     
-    // 2. Thêm vào team_members
+    // Thêm vào project_members
     const { data, error } = await supabase
-      .from('team_members')
-      .insert({ team_id: teamId, user_id: profile.id, role: 'member' })
+      .from('project_members')
+      .insert({ project_id: projectId, user_email: email, role: 'member' })
       .select()
       .single();
     
     if (data && !error) {
-      toast.success(`Đã thêm ${email} vào team`);
+      toast.success(`Đã thêm ${email} vào dự án`);
       setEmail('');
     } else {
-      // Catch unique constraint violation
-      toast.error('Lỗi: ' + (error?.message || 'NgÆ°á»i dùng đã ở trong team.'));
+      // Nếu lỗi là duplicate thì báo lỗi hợp lý
+      if (error?.code === '23505') {
+        toast.error('Người dùng đã ở trong dự án.');
+      } else {
+        toast.error('Lỗi: ' + (error?.message || 'Không thể thêm thành viên.'));
+      }
     }
 
     setIsLoading(false);
   };
   
-  const handleRemove = async (userId: string) => {
+  const handleRemove = async (userEmail: string) => {
     const { error } = await supabase
-      .from('team_members')
+      .from('project_members')
       .delete()
-      .eq('team_id', teamId)
-      .eq('user_id', userId);
+      .eq('project_id', projectId)
+      .eq('user_email', userEmail);
       
     if (error) {
       toast.error('Lỗi xóa thành viên: ' + error.message);
     } else {
-      toast.success('Đã xóa thành viên');
+      toast.success('Đã xóa thành viên khỏi dự án');
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-        <h3 className="mb-4 text-lg font-medium">Mời thành viên</h3>
+        <h3 className="mb-4 text-lg font-medium">Mời thành viên vào Dự án</h3>
         <form onSubmit={handleInvite} className="flex flex-col sm:flex-row sm:items-end gap-4">
           <div className="flex-1 space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -132,16 +136,16 @@ export const MemberManager = ({ teamId }: MemberManagerProps) => {
         ) : (
           <div className="divide-y divide-slate-200 rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
             {members.map((member) => (
-              <div key={member.user_id} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors dark:hover:bg-slate-900/50">
+              <div key={member.user_email} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors dark:hover:bg-slate-900/50">
                 <div className="overflow-hidden">
-                  <p className="font-medium truncate" title={member.profiles?.email}>{member.profiles?.email || 'Unknown'}</p>
+                  <p className="font-medium truncate" title={member.user_email}>{member.user_email}</p>
                   <p className="text-sm text-slate-500 capitalize">{member.role}</p>
                 </div>
                 {member.role !== 'admin' && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    onClick={() => handleRemove(member.user_id)}
+                    onClick={() => handleRemove(member.user_email)}
                     className="ml-2 text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 active:scale-95 focus-visible:ring-2 transition-all"
                   >
                     Xóa

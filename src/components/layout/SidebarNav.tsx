@@ -68,6 +68,9 @@ export function SidebarNav({ teams }: SidebarNavProps) {
           );
         })}
 
+        {/* Nút mời thành viên giờ sẽ nằm lọt thỏm chung vào danh sách các chức năng chính để dễ ấn hơn */}
+        <React.Suspense fallback={null}><SidebarInviteButton /></React.Suspense>
+
         <div className="mt-8 mb-2 px-3 flex items-center justify-between">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-slate-400">
             Teams của bạn
@@ -103,10 +106,6 @@ export function SidebarNav({ teams }: SidebarNavProps) {
           )}
         </div>
       </nav>
-
-      <div className="p-4 border-t border-slate-200 dark:border-slate-800 shrink-0">
-        <React.Suspense fallback={null}><SidebarInviteButton /></React.Suspense>
-      </div>
     </div>
   );
 }

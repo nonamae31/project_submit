@@ -1,14 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { useKanbanStore } from '@/stores/useKanbanStore';
-import { supabase } from '@/lib/supabase/client';
+import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
@@ -16,62 +14,99 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Lightbulb, CheckCircle, List, FileText } from 'lucide-react';
-
-interface CreateTaskModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  projectId?: string;
-}
+import { supabase } from '@/lib/supabase/client';
+import { useKanbanStore } from '@/stores/useKanbanStore';
+import { toast } from 'sonner';
+import { Lightbulb, FileText, CheckCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge'; // E6: Role Badge
 
 const PROMPT_TEMPLATES = [
-  {
-    icon: <CheckCircle className="w-3 h-3 mr-1" />,
-    label: 'Chính tả & Ngữ pháp',
-    text: 'Hãy kiểm tra xem tài liệu này có lỗi chính tả hoặc lỗi ngữ pháp tiếng Việt nào không. Trả lời ngắn gọn.'
-  },
-  {
-    icon: <List className="w-3 h-3 mr-1" />,
-    label: 'Cấu trúc 3 phần',
-    text: 'Tài liệu này có chia thành cấu trúc rõ ràng gồm 3 phần: Mở bài, Thân bài, Kết luận không?'
-  },
-  {
-    icon: <FileText className="w-3 h-3 mr-1" />,
-    label: 'Tóm tắt & Chấm điểm',
-    text: 'Hãy tóm tắt tài liệu này trong 3 câu và chấm điểm chất lượng nội dung từ 1-10.'
-  }
+  { label: 'Tóm tắt nội dung', text: 'Hãy tóm tắt nội dung chính của tài liệu này.', icon: <FileText className="w-3 h-3 mr-1" /> },
+  { label: 'Kiểm tra lỗi chính tả', text: 'Hãy kiểm tra lỗi chính tả và ngữ pháp trong tài liệu.', icon: <CheckCircle className="w-3 h-3 mr-1" /> },
 ];
 
-export const CreateTaskModal = ({ isOpen, onClose, projectId }: CreateTaskModalProps) => {
-  const { addTask, columns } = useKanbanStore();
-  const [title, setTitle] = React.useState('');
-  const [description, setDescription] = React.useState('');
-  const [assignee, setAssignee] = React.useState('');
-  const [columnId, setColumnId] = React.useState('');
-  const [aiPrompt, setAiPrompt] = React.useState('');
+interface ProjectMember {
+  user_email: string;
+  role: string;
+}
+
+interface CreateTaskModalProps {
+  projectId: string | null;
+  isOpen: boolean;
+  onClose: () => void;
+  defaultColumnId?: string;
+}
+
+export const CreateTaskModal = ({ projectId, isOpen, onClose, defaultColumnId }: CreateTaskModalProps) => {
+  const { columns, addTask } = useKanbanStore();
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [columnId, setColumnId] = useState<string>(defaultColumnId || '');
+  const [assignee, setAssignee] = useState<string>('');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
   
-  const [members, setMembers] = React.useState<any[]>([]);
-  const [isLoading, setIsLoading] = React.useState(false);
+  // E2: Dropdown Search State
+  const [searchQuery, setSearchQuery] = useState('');
 
-  React.useEffect(() => {
-    if (columns.length > 0 && !columnId) {
-      setColumnId(columns[0].id);
+  useEffect(() => {
+    if (isOpen) {
+      setTitle('');
+      setDescription('');
+      setAssignee('');
+      setAiPrompt('');
+      if (defaultColumnId) setColumnId(defaultColumnId);
+      else if (columns.length > 0) setColumnId(columns[0].id);
+      setSearchQuery('');
     }
-  }, [columns, columnId]);
+  }, [isOpen, defaultColumnId, columns]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchMembers = async () => {
       if (!projectId) return;
+
+      // FE-001: Fetch all members including leader/admin
       const { data } = await supabase
         .from('project_members')
         .select('*')
         .eq('project_id', projectId);
+        
+      let allMembers = data || [];
       
-      if (data) {
-        setMembers(data);
+      const { data: projectData } = await supabase
+        .from('projects')
+        .select('owner_id')
+        .eq('id', projectId)
+        .single();
+
+      if (projectData?.owner_id) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('email, role')
+          .eq('id', projectData.owner_id)
+          .single();
+          
+        if (profileData?.email) {
+          if (!allMembers.some(m => m.user_email === profileData.email)) {
+            allMembers = [{ user_email: profileData.email, role: 'leader' }, ...allMembers];
+          }
+        }
       }
+      
+      // Sort leaders to the top
+      allMembers.sort((a, b) => {
+        if (a.role === 'admin' || a.role === 'leader') return -1;
+        if (b.role === 'admin' || b.role === 'leader') return 1;
+        return 0;
+      });
+      
+      setMembers(allMembers);
     };
-    if (isOpen) fetchMembers();
+
+    if (isOpen) {
+      fetchMembers();
+    }
   }, [projectId, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,7 +115,7 @@ export const CreateTaskModal = ({ isOpen, onClose, projectId }: CreateTaskModalP
 
     setIsLoading(true);
 
-    const newTask: any = {
+    const newTask: Record<string, string | null> = {
       title,
       description,
       column_id: columnId,
@@ -99,7 +134,7 @@ export const CreateTaskModal = ({ isOpen, onClose, projectId }: CreateTaskModalP
       .single();
 
     if (error) {
-      toast.error('Failed to create task');
+      toast.error('Lỗi khi tạo công việc');
       setIsLoading(false);
       return;
     }
@@ -109,18 +144,17 @@ export const CreateTaskModal = ({ isOpen, onClose, projectId }: CreateTaskModalP
       if (!stateTasks.find((t) => t.id === data.id)) {
         addTask(data);
       }
-      toast.success('Task created');
+      toast.success('Đã tạo công việc');
     }
     
-    setTitle('');
-    setDescription('');
-    setAssignee('');
-    setAiPrompt('');
     setIsLoading(false);
     onClose();
   };
 
   if (!isOpen) return null;
+
+  // E2: Filter members based on search
+  const filteredMembers = members.filter(m => m.user_email.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Thêm công việc mới">
@@ -211,14 +245,35 @@ export const CreateTaskModal = ({ isOpen, onClose, projectId }: CreateTaskModalP
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="unassigned" className="text-zinc-500 italic">
+                {/* E2: Dropdown Search */}
+                <div className="p-2 border-b border-zinc-100 dark:border-zinc-800">
+                  <Input 
+                    placeholder="Tìm theo email..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-8 text-sm"
+                    onKeyDown={(e) => e.stopPropagation()} // Prevent closing dropdown on type
+                  />
+                </div>
+                <SelectItem value="unassigned" className="text-zinc-500 italic mt-1">
                   Không giao cho ai
                 </SelectItem>
-                {members.map((member) => (
+                {filteredMembers.map((member) => (
                   <SelectItem key={member.user_email} value={member.user_email}>
-                    {member.user_email}
+                    <div className="flex items-center gap-2">
+                      <span className="truncate max-w-[150px]">{member.user_email}</span>
+                      {/* E6: Role Badge */}
+                      {(member.role === 'admin' || member.role === 'leader') && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400">
+                          Leader
+                        </Badge>
+                      )}
+                    </div>
                   </SelectItem>
                 ))}
+                {filteredMembers.length === 0 && (
+                  <div className="p-2 text-sm text-zinc-500 text-center">Không tìm thấy ai</div>
+                )}
               </SelectContent>
             </Select>
           </div>

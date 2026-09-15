@@ -13,6 +13,8 @@ export interface Task {
   attachedFileUrl?: string;
   attachedFileName?: string;
   assignee?: string;
+  assignee_email?: string;
+  assignee_avatar_url?: string;
   project_id?: string;
   is_public?: boolean;
   ai_prompt?: string;

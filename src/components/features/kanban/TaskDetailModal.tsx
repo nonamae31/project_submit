@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Task } from '@/types/kanban.types';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TaskSubmissions } from './TaskSubmissions';
+import { Badge } from '@/components/ui/badge'; // E6: Role Badge
 
 interface TaskDetailModalProps {
   task: Task | null;
@@ -26,17 +27,33 @@ interface TaskDetailModalProps {
   onClose: () => void;
 }
 
-export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps) => {
+interface ProjectMember {
+  user_email: string;
+  role: string;
+}
+
+interface User {
+  id: string;
+  email: string;
+}
+
+export const TaskDetailModal = ({ task: initialTask, isOpen, onClose }: TaskDetailModalProps) => {
   const [activeTab, setActiveTab] = useState<'details' | 'submissions'>('details');
-  const [members, setMembers] = useState<any[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  
+  // E2: Dropdown Search State
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Editable state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
 
-  const { updateTaskAssignee, columns, setTasks } = useKanbanStore();
+  const { tasks, updateTaskAssignee, columns, setTasks } = useKanbanStore();
+  
+  // Always use the latest task from the store to prevent stale props (desynchronization)
+  const task = initialTask ? tasks.find(t => t.id === initialTask.id) || initialTask : null;
 
   useEffect(() => {
     if (task) {
@@ -45,7 +62,7 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
       setAiPrompt(task.ai_prompt || '');
       setActiveTab('details'); // Reset tab when opening a new task
     }
-  }, [task, isOpen]);
+  }, [initialTask, isOpen]); // Use initialTask here so it only resets when opening a DIFFERENT task
 
   useEffect(() => {
     import('@/app/actions/auth.actions').then((m) => {
@@ -66,20 +83,52 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
       }
 
       if (projectId) {
+        // FE-001: Fetch all members, including admins and leaders
         const { data } = await supabase
           .from('project_members')
           .select('*')
           .eq('project_id', projectId);
-        if (data) setMembers(data);
+          
+        let allMembers = data || [];
+        
+        // Also ensure owner is in the list just in case
+        const { data: projectData } = await supabase
+          .from('projects')
+          .select('owner_id')
+          .eq('id', projectId)
+          .single();
+
+        if (projectData?.owner_id) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('email, role')
+            .eq('id', projectData.owner_id)
+            .single();
+            
+          if (profileData?.email) {
+            if (!allMembers.some(m => m.user_email === profileData.email)) {
+              allMembers = [{ user_email: profileData.email, role: 'leader' }, ...allMembers];
+            }
+          }
+        }
+        
+        // Sort leaders to the top
+        allMembers.sort((a, b) => {
+          if (a.role === 'admin' || a.role === 'leader') return -1;
+          if (b.role === 'admin' || b.role === 'leader') return 1;
+          return 0;
+        });
+        
+        setMembers(allMembers);
       }
     };
 
     if (isOpen) {
       fetchMembers();
     }
-  }, [task, isOpen, columns]);
+  }, [initialTask?.id, isOpen, columns]);
 
-  const handleUpdate = async (field: string, value: any) => {
+  const handleUpdate = async (field: keyof Task, value: string | null) => {
     if (!task) return;
     
     // Update locally in store first (optimistic)
@@ -166,15 +215,36 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                 }
               }}
             >
-              <SelectTrigger className="w-full sm:w-[250px]">
+              <SelectTrigger className="w-full sm:w-[300px]">
                 <SelectValue placeholder="Chưa giao cho ai" />
               </SelectTrigger>
               <SelectContent>
-                {members.map((member) => (
+                {/* E2: Dropdown Search */}
+                <div className="p-2 border-b border-zinc-100 dark:border-zinc-800">
+                  <Input 
+                    placeholder="Tìm theo email..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-8 text-sm"
+                    onKeyDown={(e) => e.stopPropagation()} // Prevent closing dropdown on type
+                  />
+                </div>
+                {members.filter(m => m.user_email.toLowerCase().includes(searchQuery.toLowerCase())).map((member) => (
                   <SelectItem key={member.user_email} value={member.user_email}>
-                    {member.user_email}
+                    <div className="flex items-center gap-2">
+                      <span className="truncate max-w-[150px]">{member.user_email}</span>
+                      {/* E6: Role Badge */}
+                      {(member.role === 'admin' || member.role === 'leader' || member.role === 'owner') && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400">
+                          Leader
+                        </Badge>
+                      )}
+                    </div>
                   </SelectItem>
                 ))}
+                {members.filter(m => m.user_email.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                  <div className="p-2 text-sm text-zinc-500 text-center">Không tìm thấy ai</div>
+                )}
               </SelectContent>
             </Select>
           </div>

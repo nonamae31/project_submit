@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils';
 import { Paperclip } from 'lucide-react';
 import { useKanbanStore } from '@/stores/useKanbanStore';
 import { supabase } from '@/lib/supabase/client';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { stripHtmlTags } from '@/utils/stringUtils';
 
 interface TaskCardProps {
   task: Task;
@@ -52,6 +55,16 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
     await supabase.from('tasks').update({ column_id: newColumnId }).eq('id', task.id);
   };
 
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => setIsMounted(true), []);
+
+  const cleanDescription = React.useMemo(() => {
+    if (!task.description) return '';
+    // Fix Hydration Mismatch: Render same as SSR on first pass
+    if (!isMounted) return task.description.replace(/<[^>]*>?/gm, '');
+    return stripHtmlTags(task.description);
+  }, [task.description, isMounted]);
+
   return (
     <div
       ref={setNodeRef}
@@ -59,6 +72,7 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
       {...attributes}
       {...listeners}
       onClick={() => onClick(task)}
+      aria-label={`Task: ${task.title}`}
       className={cn(
         'group flex flex-col gap-2 rounded-lg border p-3 transition-all cursor-pointer hover:ring-1 hover:ring-primary/50 hover:shadow-md',
         isDragging 
@@ -67,16 +81,20 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
       )}
     >
       <div className="flex justify-between items-start gap-2">
-        <h4 className="text-sm font-medium">{task.title}</h4>
-        {task.assignee && (
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary" title={task.assignee}>
-            {assigneeInitials}
-          </div>
-        )}
+        <h4 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{task.title}</h4>
+        
       </div>
-      <p className="text-xs text-zinc-500 line-clamp-2 dark:text-zinc-400">
-        {task.description}
-      </p>
+      
+      {/* E4: Contrast Dark mode, E7: Empty state */}
+      {cleanDescription ? (
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">
+          {cleanDescription}
+        </p>
+      ) : (
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">
+          Không có mô tả
+        </p>
+      )}
       
       {task.attachedFileName && (
         <div className="mt-2 flex items-center gap-1 text-xs text-blue-500">
@@ -93,6 +111,7 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
         <select 
           value={task.column_id} 
           onChange={handleMove}
+          aria-label="Move task to column"
           className="text-xs border rounded p-1 bg-transparent w-full text-zinc-600 dark:text-zinc-400 dark:border-zinc-700"
         >
           <option value="" disabled>Move to...</option>
@@ -101,6 +120,31 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
           ))}
         </select>
       </div>
+
+      {task.assignee && (
+        <div className="mt-2 border-t border-zinc-100 dark:border-zinc-800 pt-2 flex items-center">
+          {/* E1: Tooltip Assignee */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2 cursor-help" onClick={(e) => e.stopPropagation()}>
+                  {/* E3: Responsive Assignee (hidden md:inline) */}
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 hidden md:inline">Phụ trách:</span>
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={task.assignee_avatar_url} alt={task.assignee} />
+                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">{assigneeInitials}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{task.assignee}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Người phụ trách: {task.assignee}</p>
+                {task.assignee_email && <p className="text-xs text-zinc-400">{task.assignee_email}</p>}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
     </div>
   );
 };

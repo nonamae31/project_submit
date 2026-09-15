@@ -30,7 +30,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
               A
             </div>
             <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white hover:text-slate-700 transition-colors">
-              Antigravity
+              SuperBoy
             </span>
           </Link>
         </div>
@@ -46,7 +46,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
           <div className="md:hidden flex items-center">
             <MobileSidebar teams={teamsList} />
             <Link href="/" className="ml-3 font-bold text-slate-900 dark:text-white">
-              Antigravity
+              SuperBoy
             </Link>
           </div>
 

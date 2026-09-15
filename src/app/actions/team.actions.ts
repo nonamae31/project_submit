@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase/client';
 import { revalidatePath } from 'next/cache';
 import type { Team } from '@/types/team.types';
+import { getSessionUser } from './auth.actions';
 
 export interface ActionResponse<T> {
   success: boolean;
@@ -18,9 +19,14 @@ export async function createTeam(formData: FormData): Promise<ActionResponse<Tea
     return { success: false, error: 'Tên team là bắt buộc' };
   }
 
+  const user = await getSessionUser();
+  if (!user) {
+    return { success: false, error: 'Bạn cần đăng nhập để tạo Team' };
+  }
+
   const { data, error } = await supabase
     .from('teams')
-    .insert([{ name, description }])
+    .insert([{ name, description, leader_id: user.id }])
     .select()
     .single();
 
