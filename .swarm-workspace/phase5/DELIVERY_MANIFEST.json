@@ -1,0 +1,13 @@
+{
+  "project": "Kanban Next.js",
+  "sprint": "Editable Modal & Privacy",
+  "status": "DELIVERED",
+  "files_changed": [
+    "src/components/features/kanban/TaskDetailModal.tsx",
+    "src/types/kanban.types.ts"
+  ],
+  "dependencies_added": [
+    "switch",
+    "textarea"
+  ]
+}

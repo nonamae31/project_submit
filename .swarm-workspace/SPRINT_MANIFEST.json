@@ -1,0 +1,8 @@
+{
+  "sprint_id": "SPRINT-20260915-08",
+  "feature_name": "Dynamic Columns & Realtime Board",
+  "raw_requirement": "Người dùng muốn Thêm cột, Xóa cột, Sửa tên cột tùy ý. Kết nối DB và Supabase Realtime.",
+  "started_at": "2026-09-15T13:33:00Z",
+  "manager": "human",
+  "swarm_status": "INITIATED"
+}

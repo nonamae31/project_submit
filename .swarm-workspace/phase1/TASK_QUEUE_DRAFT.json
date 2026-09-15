@@ -1,0 +1,57 @@
+{
+  "decomposed_tasks": [
+    {
+      "task_id": "FE-001",
+      "title": "Setup Foundation & Authentication",
+      "description": "Khởi tạo Next.js App Router, cấu hình TailwindCSS, shadcn/ui. Thiết lập Supabase Client và Auth Provider. Xây dựng trang Đăng nhập / Đăng ký đơn giản.",
+      "priority": "P0",
+      "complexity": "M",
+      "scope_validation": "FRONTEND_ONLY",
+      "dependencies": []
+    },
+    {
+      "task_id": "FE-002",
+      "title": "Team Management & Dashboard",
+      "description": "Giao diện Dashboard chính: Liệt kê các nhóm đã tham gia. Chức năng tạo nhóm mới, mời/thêm thành viên, quản lý danh sách thành viên trong nhóm.",
+      "priority": "P1",
+      "complexity": "M",
+      "scope_validation": "FRONTEND_ONLY",
+      "dependencies": ["FE-001"]
+    },
+    {
+      "task_id": "FE-003",
+      "title": "Dynamic Board & Columns UI",
+      "description": "Giao diện cấu hình bảng (Board) cho Leader. Thêm/xóa/sửa các cột động (Todo, Doing, Test...). Hiển thị layout Kanban Board chuẩn.",
+      "priority": "P1",
+      "complexity": "L",
+      "scope_validation": "FRONTEND_ONLY",
+      "dependencies": ["FE-002"]
+    },
+    {
+      "task_id": "FE-004",
+      "title": "Task Management & Submission UI",
+      "description": "Tạo task mới (Leader), phân công task. Giao diện Task Detail cho phép Member nộp tài liệu/file đính kèm. Xử lý logic ẩn/hiện file dựa trên role (chỉ Leader và Owner xem được).",
+      "priority": "P1",
+      "complexity": "L",
+      "scope_validation": "FRONTEND_ONLY",
+      "dependencies": ["FE-003"]
+    },
+    {
+      "task_id": "FE-005",
+      "title": "AI Evaluation & Summary Integration",
+      "description": "Tích hợp UI gọi AI API (hỗ trợ local model / custom endpoint). Nút 'Đánh giá AI' cho bản nộp. Giao diện hiển thị feedback của AI cho tài liệu và bảng tóm tắt task công khai cho các thành viên khác.",
+      "priority": "P2",
+      "complexity": "M",
+      "scope_validation": "FRONTEND_ONLY",
+      "dependencies": ["FE-004"]
+    }
+  ],
+  "rejected_tasks": [
+    {
+      "task_id": "BE-001",
+      "title": "Database Schema Setup",
+      "description": "Tạo các table Supabase, Row Level Security (RLS) policies.",
+      "reason": "REJECTED - Backend/DB scope. Manager sẽ đề xuất schema cho User tự tạo."
+    }
+  ]
+}

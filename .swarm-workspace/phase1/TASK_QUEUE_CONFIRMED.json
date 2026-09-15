@@ -1,0 +1,22 @@
+[
+  {
+    "id": "FE-020",
+    "title": "Database Schema: Task Submissions",
+    "description": "Create SQL script to create `task_submissions` table with fields: id, task_id, user_id, type (enum), content, cloudinary_public_id, is_public."
+  },
+  {
+    "id": "FE-021",
+    "title": "Cloudinary Setup & Server Actions",
+    "description": "Add CLOUDINARY_URL to .env.local. Implement Next.js Server Actions for secure file upload (`uploadSubmissionMedia`) and synchronized deletion (`deleteSubmissionMedia`) using Cloudinary Node.js SDK."
+  },
+  {
+    "id": "FE-022",
+    "title": "Submissions UI & Form Handling",
+    "description": "Update `TaskDetailModal` to include a 'Bài nộp' (Submissions) tab. Build components to handle Text, Link, and File uploads with progress indicators and optimistic UI."
+  },
+  {
+    "id": "FE-023",
+    "title": "Privacy RBAC & Leader Toggle",
+    "description": "Implement `isFileVisible` logic (owner, leader, public). Add a toggle switch for Leaders to mark submissions as public, updating the `is_public` field in DB."
+  }
+]
