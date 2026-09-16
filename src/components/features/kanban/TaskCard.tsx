@@ -11,6 +11,20 @@ import { supabase } from '@/lib/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { stripHtmlTags } from '@/utils/stringUtils';
+import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { deleteTask } from '@/actions/kanban.actions';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface TaskCardProps {
   task: Task;
@@ -18,7 +32,7 @@ interface TaskCardProps {
 }
 
 export const TaskCard = ({ task, onClick }: TaskCardProps) => {
-  const { columns, moveTask } = useKanbanStore();
+  const { columns, moveTask, removeTask, addTask } = useKanbanStore();
   const {
     attributes,
     listeners,
@@ -91,8 +105,48 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
       )}
     >
       <div className="flex justify-between items-start gap-2">
-        <h4 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{task.title}</h4>
+        <h4 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 flex-1">{task.title}</h4>
         
+        <AlertDialog>
+          <AlertDialogTrigger
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/30 p-1 rounded transition-colors shrink-0"
+            aria-label="Xóa công việc"
+          >
+            <Trash2 className="h-4 w-4" />
+          </AlertDialogTrigger>
+          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xóa công việc</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bạn có chắc chắn muốn xóa công việc này không? Mọi dữ liệu đính kèm sẽ bị ẩn khỏi bảng.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Hủy</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  // Optimistic UI: remove task immediately
+                  removeTask(task.id);
+                  try {
+                    await deleteTask(task.id, task.project_id || '');
+                    toast.success("Đã xóa công việc");
+                  } catch (error) {
+                    console.error(error);
+                    // Rollback
+                    addTask(task);
+                    toast.error("Xóa công việc thất bại, đã khôi phục lại.");
+                  }
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Xác nhận
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
       
       {/* E4: Contrast Dark mode, E7: Empty state */}

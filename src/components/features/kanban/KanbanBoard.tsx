@@ -39,7 +39,7 @@ export const KanbanBoard = ({ projectId }: { projectId?: string }) => {
     const fetchData = async () => {
       const [columnsRes, tasksRes, userRes] = await Promise.all([
         supabase.from('columns').select('*').eq('project_id', projectId).order('position'),
-        supabase.from('tasks').select('*').eq('project_id', projectId),
+        supabase.from('tasks').select('*').eq('project_id', projectId).eq('is_deleted', false),
         supabase.auth.getUser()
       ]);
       
@@ -85,7 +85,11 @@ export const KanbanBoard = ({ projectId }: { projectId?: string }) => {
               addTask(payload.new as Task);
             }
           } else if (payload.eventType === 'UPDATE') {
-            updateTask(payload.new as Task);
+            if (payload.new.is_deleted) {
+              removeTask(payload.new.id);
+            } else {
+              updateTask(payload.new as Task);
+            }
           } else if (payload.eventType === 'DELETE') {
             removeTask(payload.old.id);
           }
