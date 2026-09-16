@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { KanbanBoard } from '@/components/features/kanban/KanbanBoard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { KnowledgeTreeClient } from '@/components/features/knowledge/KnowledgeTreeClient';
@@ -16,13 +17,14 @@ export default async function ProjectBoardPage({ params }: { params: Promise<{ i
         </div>
         
         <TabsContent value="kanban" className="flex-1 overflow-hidden m-0 p-0 border-none data-[state=active]:flex data-[state=active]:flex-col">
-          <KanbanBoard projectId={id} />
+          <Suspense fallback={<div>Loading Kanban...</div>}><KanbanBoard projectId={id} /></Suspense>
         </TabsContent>
         
         <TabsContent value="knowledge" className="flex-1 overflow-hidden m-0 p-0 border-none data-[state=active]:flex data-[state=active]:flex-col">
-          <KnowledgeTreeClient projectId={id} />
+          <Suspense fallback={<div>Loading Knowledge Tree...</div>}><KnowledgeTreeClient projectId={id} /></Suspense>
         </TabsContent>
       </Tabs>
     </div>
   );
 }
+
