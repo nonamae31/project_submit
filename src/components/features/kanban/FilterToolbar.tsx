@@ -6,6 +6,7 @@ import { Users, User, UserMinus, LayoutGrid } from 'lucide-react';
 
 export interface Task {
   id: string | number;
+  assignee?: string | null;
   assignee_email?: string | null;
   assignee_avatar_url?: string | null;
   assignee_name?: string | null;
@@ -36,12 +37,13 @@ export default function FilterToolbar({ tasks, currentUserEmail }: FilterToolbar
   const uniqueAssignees = useMemo(() => {
     const map = new Map<string, { email: string; avatar?: string | null; name?: string | null }>();
     tasks?.forEach((task) => {
-      if (task.assignee_email) {
-        if (!map.has(task.assignee_email)) {
-          map.set(task.assignee_email, {
-            email: task.assignee_email,
+      const email = task.assignee_email || task.assignee;
+      if (email) {
+        if (!map.has(email)) {
+          map.set(email, {
+            email: email,
             avatar: task.assignee_avatar_url,
-            name: task.assignee_name || task.assignee_email,
+            name: task.assignee_name || email,
           });
         }
       }

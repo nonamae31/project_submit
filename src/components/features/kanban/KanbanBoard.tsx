@@ -145,8 +145,8 @@ export const KanbanBoard = ({ projectId }: { projectId?: string }) => {
 
   const filteredTasks = React.useMemo(() => {
     if (!filterAssignee || filterAssignee === 'all') return tasks;
-    if (filterAssignee === 'unassigned') return tasks.filter(t => !t.assignee_email);
-    return tasks.filter(t => t.assignee_email === filterAssignee);
+    if (filterAssignee === 'unassigned') return tasks.filter(t => !(t.assignee_email || t.assignee));
+    return tasks.filter(t => (t.assignee_email || t.assignee) === filterAssignee);
   }, [tasks, filterAssignee]);
 
   const boardColumns = React.useMemo(() => {
