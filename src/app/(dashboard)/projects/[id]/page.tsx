@@ -7,7 +7,7 @@ export default async function ProjectBoardPage({ params }: { params: Promise<{ i
   const { id } = await params;
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-white text-zinc-950 dark:bg-black dark:text-zinc-50">
+    <div className="flex h-full flex-col overflow-hidden bg-white text-zinc-950 dark:bg-black dark:text-zinc-50">
       <Tabs defaultValue="kanban" className="flex flex-col h-full w-full">
         <div className="px-4 py-2 border-b shrink-0">
           <TabsList>
@@ -27,4 +27,5 @@ export default async function ProjectBoardPage({ params }: { params: Promise<{ i
     </div>
   );
 }
+
 
