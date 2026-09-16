@@ -35,14 +35,15 @@ interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultColumnId?: string;
+  defaultAssignee?: string;
 }
 
-export const CreateTaskModal = ({ projectId, isOpen, onClose, defaultColumnId }: CreateTaskModalProps) => {
+export const CreateTaskModal = ({ projectId, isOpen, onClose, defaultColumnId, defaultAssignee }: CreateTaskModalProps) => {
   const { columns, addTask } = useKanbanStore();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [columnId, setColumnId] = useState<string>(defaultColumnId || '');
-  const [assignee, setAssignee] = useState<string>('');
+  const [assignee, setAssignee] = useState<string>(defaultAssignee || '');
   const [aiPrompt, setAiPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [members, setMembers] = useState<ProjectMember[]>([]);
@@ -54,13 +55,13 @@ export const CreateTaskModal = ({ projectId, isOpen, onClose, defaultColumnId }:
     if (isOpen) {
       setTitle('');
       setDescription('');
-      setAssignee('');
+      setAssignee(defaultAssignee || '');
       setAiPrompt('');
       if (defaultColumnId) setColumnId(defaultColumnId);
       else if (columns.length > 0) setColumnId(columns[0].id);
       setSearchQuery('');
     }
-  }, [isOpen, defaultColumnId, columns]);
+  }, [isOpen, defaultColumnId, defaultAssignee, columns]);
 
   useEffect(() => {
     const fetchMembers = async () => {

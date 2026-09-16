@@ -1,40 +1,22 @@
-# Master Architecture Document: Knowledge Tree & Cloudinary Sync
+# MASTER ARCHITECTURE: Kanban Filter by Assignee
 
-## 1. Thiết kế Cơ sở dữ liệu (Database Schema)
-Sử dụng mô hình đệ quy **Adjacency List** với `parent_id`:
+## 1. M?C TI�U
+Th�m thanh Toolbar l?c Kanban theo Assignee.
 
-```sql
-CREATE TABLE knowledge_nodes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    parent_id UUID REFERENCES knowledge_nodes(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    progress SMALLINT DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
-    media_files JSONB DEFAULT '[]'::jsonb, -- Array of { url, public_id, type }
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+## 2. NH?NG ENHANCEMENT (C?I TI?N) �U?C �? XU?T T? SWARM
+### UI / UX (Alpha)
+- **E1: Avatar Group Quick-Filter**: Thay v� Select Dropdown nh�m ch�n, d�ng m?t d�y Avatar tr�n d? click nhanh.
+- **E2: URL-Driven State**: Luu b? l?c v�o URL (`?assignee=...`) d? c� th? copy link g?i cho ngu?i kh�c v� gi? nguy�n b? l?c khi F5.
+- **E3: Smooth Filtering Animations**: D�ng Framer Motion / AutoAnimate d? hi?u ?ng l?c kh�ng b? gi?t c?c.
+- **E4: Column Empty States**: Hi?n th? r� "(0)" v� th�ng b�o "Kh�ng c� task n�o" b�n trong c?t.
 
-CREATE INDEX idx_knowledge_nodes_parent_id ON knowledge_nodes(parent_id);
-```
+### Performance (Beta)
+- **E5: Unique Members Extraction**: Kh�ng c?n g?i API Supabase ri�ng, t? d?ng duy?t m?ng `tasks` hi?n c� d? l?y danh s�ch th�nh vi�n tham gia b?ng.
+- **E6: Render Optimization**: B?c `filteredTasks` qua `useMemo` v� c�c `BoardColumn` b?ng `React.memo` d? Kanban kh�ng b? lag khi chuy?n filter.
 
-## 2. Logic Backend & Cảnh báo Sống còn
-- **Upload:** File ảnh/video sẽ được đẩy thẳng lên Cloudinary thông qua Server Action (`upload_stream`), lấy `url` và `public_id` lưu vào mảng `media_files` ở node tương ứng.
-- **Xóa Đệ Quy:** 
-  1. Viết một Supabase RPC function (`get_all_descendants`) sử dụng `WITH RECURSIVE` để quét tất cả node con, cháu, chắt...
-  2. Map danh sách toàn bộ các file media của tập hợp node bị ảnh hưởng để lấy danh sách `public_id`.
-  3. Gửi Promise.all gọi `cloudinary.uploader.destroy()` và in log theo đúng yêu cầu: `[CLOUDINARY] Đã xóa thành công file: public_id_xxx`.
-  4. Cuối cùng, thực hiện xóa node trên DB (nhờ có `ON DELETE CASCADE` ở khóa ngoại `parent_id`, chỉ cần xóa node gốc là xóa luôn toàn bộ con cháu trong database).
+### Edge Cases & Integration (Gamma)
+- **E7: Smart Auto-Assign**: �ang b?t filter cho "Alice", n?u b?m n�t "T?o Task" th� h? th?ng t? set Assignee l� Alice.
+- **E8: Safe D&D with Filters**: K�o th? task khi dang l?c v?n mu?t m�, ch? d?i Status ch? kh�ng thay d?i c�c state ?n.
+- **E9: Global Empty State**: B?m v�o 1 ngu?i kh�ng c� b?t k? vi?c n�o, hi?n th? 1 m�n h�nh r?ng to ? gi?a b?ng thay v� 5 c?t r?ng.
+- **E10: "Unassigned" Filter**: Th�m m?t m?c l?c ri�ng d? t�m c�c task "Chua c� ai nh?n".
 
-## 3. Kiến trúc Frontend (React Flow + Optimistic UI)
-- **Giao diện:** Tab 1 (Kanban Board) và Tab 2 (Knowledge Tree Visualize).
-- **Thư viện Cây:** Sử dụng `React Flow` (hoặc `xyflow/react`) để vẽ cây trực quan dạng Canvas, có thể kéo thả (pan/zoom), rất phù hợp để làm mindmap hay hệ thống kiến thức phân mảnh.
-- **Optimistic UI:** Lưu trữ và quản lý mảng `nodes`, `edges` phẳng cho React Flow bằng `useOptimistic`. Khi người dùng xóa 1 Node, chúng ta dùng thuật toán tìm kiếm (BFS/DFS) trên danh sách kề ở front-end để lọc bỏ ngay lập tức nhánh bị xóa khỏi màn hình, đồng thời gọi Server Action ẩn ngầm. Nếu thất bại, rollback tự động.
-
-## 4. Các Đề xuất Enhancements
-1. **E1 - Tối ưu Layout Tự động (Auto-layout Engine)**: Tích hợp thư viện `dagre` để cây tự động phân bổ tọa độ thông minh, không bắt user phải kéo từng ô cho thẳng hàng.
-2. **E2 - Trình Xem Trước (Preview Drawer/Modal)**: Xem ảnh/video trực tiếp bên trong Tab bằng 1 panel trượt ra mà không cần tải tab mới.
-3. **E3 - Xuất Hình Ảnh Cây (Export to Image)**: Tính năng chụp nhanh sơ đồ cây xuất ra PNG.
-4. **E4 - Responsive Mobile Fallback**: Sơ đồ Canvas khó vuốt trên điện thoại. Khi vào Mobile, UI tự chuyển thành danh sách Nested Collapsible List.
-5. **E5 - Tìm kiếm (Search & Focus)**: Gõ tìm kiếm và tự động zoom/pan đến đúng ô.

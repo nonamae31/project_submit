@@ -14,22 +14,28 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { useSearchParams } from 'next/navigation';
 import { useKanbanStore } from '@/stores/useKanbanStore';
 import type { Task, Column, BoardColumnType } from '@/types/kanban.types';
 import { BoardColumn } from './BoardColumn';
 import { TaskCard } from './TaskCard';
 import { TaskDetailModal } from './TaskDetailModal';
 import { CreateTaskModal } from './CreateTaskModal';
+import FilterToolbar from './FilterToolbar';
 import { supabase } from '@/lib/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
+import { getSessionUser } from '@/app/actions/auth.actions';
 import { BoardTour } from './BoardTour';
 
 export const KanbanBoard = ({ projectId }: { projectId?: string }) => {
   const { tasks, setTasks, addTask, updateTask, removeTask, columns: storeColumns, setColumns, addColumn, updateColumn, removeColumn } = useKanbanStore();
+  const searchParams = useSearchParams();
+  const filterAssignee = searchParams.get('assignee');
   const [activeTask, setActiveTask] = React.useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = React.useState<Task | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [onlineUsers, setOnlineUsers] = React.useState<any[]>([]);
+  const [userEmail, setUserEmail] = React.useState('');
 
   React.useEffect(() => {
     if (!projectId) return;
@@ -37,14 +43,15 @@ export const KanbanBoard = ({ projectId }: { projectId?: string }) => {
     let presenceChannel: any;
 
     const fetchData = async () => {
-      const [columnsRes, tasksRes, userRes] = await Promise.all([
+      const [columnsRes, tasksRes, userSession] = await Promise.all([
         supabase.from('columns').select('*').eq('project_id', projectId).order('position'),
         supabase.from('tasks').select('*').eq('project_id', projectId).eq('is_deleted', false),
-        supabase.auth.getUser()
+        getSessionUser()
       ]);
       
       if (columnsRes.data && !columnsRes.error) setColumns(columnsRes.data as Column[]);
       if (tasksRes.data && !tasksRes.error) setTasks(tasksRes.data as Task[]);
+      if (userSession?.email) setUserEmail(userSession.email);
 
       // For custom auth, we need to get user from API route or profile, but let's just get session email if we can.
       // Wait, we bypass supabase.auth.getUser() because it's disabled.
@@ -136,20 +143,26 @@ export const KanbanBoard = ({ projectId }: { projectId?: string }) => {
     })
   );
 
+  const filteredTasks = React.useMemo(() => {
+    if (!filterAssignee || filterAssignee === 'all') return tasks;
+    if (filterAssignee === 'unassigned') return tasks.filter(t => !t.assignee_email);
+    return tasks.filter(t => t.assignee_email === filterAssignee);
+  }, [tasks, filterAssignee]);
+
   const boardColumns = React.useMemo(() => {
     const cols: Record<string, BoardColumnType> = {};
     storeColumns.forEach((col) => {
       cols[col.id] = { ...col, tasks: [] };
     });
 
-    tasks.forEach((task) => {
+    filteredTasks.forEach((task) => {
       if (cols[task.column_id]) {
         cols[task.column_id].tasks.push(task);
       }
     });
 
     return storeColumns.map((col) => cols[col.id]);
-  }, [storeColumns, tasks]);
+  }, [storeColumns, filteredTasks]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -298,6 +311,8 @@ export const KanbanBoard = ({ projectId }: { projectId?: string }) => {
           </div>
         </div>
 
+        <FilterToolbar tasks={tasks} currentUserEmail={userEmail} />
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -305,15 +320,21 @@ export const KanbanBoard = ({ projectId }: { projectId?: string }) => {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex flex-1 gap-6 overflow-x-auto pb-4" id="tour-step-2">
-          {boardColumns.map((col) => (
-            <BoardColumn 
-              key={col.id} 
-              column={col} 
-              onTaskClick={setSelectedTask} 
-            />
-          ))}
-        </div>
+        {filterAssignee && filterAssignee !== 'all' && filteredTasks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
+            Thành viên này hiện tại chưa có công việc nào.
+          </div>
+        ) : (
+          <div className="flex flex-1 gap-6 overflow-x-auto pb-4" id="tour-step-2">
+            {boardColumns.map((col) => (
+              <BoardColumn 
+                key={col.id} 
+                column={col} 
+                onTaskClick={setSelectedTask} 
+              />
+            ))}
+          </div>
+        )}
 
         <DragOverlay>
           {activeTask ? <TaskCard task={activeTask} onClick={() => {}} /> : null}
@@ -330,6 +351,7 @@ export const KanbanBoard = ({ projectId }: { projectId?: string }) => {
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
           projectId={projectId || null}
+          defaultAssignee={filterAssignee || undefined}
         />
       </div>
     </div>

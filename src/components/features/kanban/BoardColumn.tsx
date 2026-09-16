@@ -86,9 +86,16 @@ export const BoardColumn = ({ column, onTaskClick }: BoardColumnProps) => {
         )}
       >
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-          {column.tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onClick={onTaskClick} />
-          ))}
+          {column.tasks.length === 0 ? (
+            <div className="py-8 text-center text-zinc-500 flex flex-col items-center">
+              <span className="text-4xl mb-2 opacity-20">📭</span>
+              <span className="text-sm">0 task</span>
+            </div>
+          ) : (
+            column.tasks.map((task) => (
+              <TaskCard key={task.id} task={task} onClick={onTaskClick} />
+            ))
+          )}
         </SortableContext>
       </div>
     </div>
