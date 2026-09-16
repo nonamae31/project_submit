@@ -71,7 +71,7 @@ export function ProjectsClient({
   };
 
   const ProjectCard = ({ project }: { project: Project }) => (
-    <Link href={`/projects/${project.id}/board`} key={project.id}>
+    <Link href={`/projects/${project.id}`} key={project.id}>
       <div className="border rounded-xl p-4 hover:border-primary transition-colors cursor-pointer bg-white dark:bg-zinc-950 shadow-sm hover:shadow-md">
         <h3 className="font-semibold text-lg mb-2">{project.name}</h3>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">
